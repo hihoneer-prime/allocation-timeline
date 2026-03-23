@@ -49,6 +49,13 @@ export interface AppState {
   ) => Promise<void>
   updateAllocation: (id: string, updates: Partial<Allocation>) => Promise<void>
   updateAllocationSegments: (id: string, segments: AllocationSegment[]) => Promise<void>
+  /** 드래그 종료 등: 날짜+세그먼트를 한 번에 반영(리렌더·원격 호출 1회) */
+  updateAllocationDatesAndSegments: (
+    id: string,
+    startDate: string,
+    endDate: string,
+    segments: AllocationSegment[]
+  ) => Promise<void>
   removeAllocation: (id: string) => Promise<void>
 
   setViewMode: (mode: 'project' | 'member') => void
@@ -251,6 +258,22 @@ export const useStore = create<AppState>()(
         set((state) => ({
           allocations: state.allocations.map((a) =>
             a.id === id ? { ...a, segments } : a
+          ),
+        }))
+      },
+
+      updateAllocationDatesAndSegments: async (id, startDate, endDate, segments) => {
+        assertWriteAllowed()
+        if (isSupabaseConfigured()) {
+          await remote.updateAllocationRow(id, {
+            start_date: startDate,
+            end_date: endDate,
+            segments,
+          })
+        }
+        set((state) => ({
+          allocations: state.allocations.map((a) =>
+            a.id === id ? { ...a, startDate, endDate, segments } : a
           ),
         }))
       },

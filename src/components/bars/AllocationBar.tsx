@@ -8,8 +8,103 @@ import { useStore } from '@/store/useStore'
 import { getWorkloadBarClass } from '@/hooks/useWorkloadColor'
 import { useTimelineScroll } from '@/contexts/TimelineScrollContext'
 import type { TimelineCell } from '@/types/timeline'
-import type { Allocation } from '@/types'
+import type { Allocation, AllocationSegment } from '@/types'
 import { AllocationRatioDialog } from '@/components/dialogs/AllocationRatioDialog'
+
+type DragMode = 'move' | 'resize-left' | 'resize-right'
+
+/** 드래그 종료 시 적용할 날짜/세그먼트 (commitDrag와 동일 로직) */
+function computeDragCommit(
+  mode: DragMode,
+  offsetPx: number,
+  allocation: Allocation,
+  cells: TimelineCell[],
+  startIdx: number,
+  endIdx: number,
+  siblingAllocations: Allocation[],
+  cellWidth: number
+): { startDate: string; endDate: string; segments: AllocationSegment[] } | null {
+  const origStart = allocation.startDate
+  const origEnd = allocation.endDate
+  const origDurationDays = Math.max(
+    1,
+    differenceInDays(parseISO(origEnd), parseISO(origStart)) + 1
+  )
+  const ratio = allocation.segments[0]?.ratio ?? 1
+
+  if (mode === 'move') {
+    const cellsToMove = Math.round(offsetPx / cellWidth)
+    if (cellsToMove === 0) return null
+    const newStartCellIdx = Math.max(0, Math.min(cells.length - 1, startIdx + cellsToMove))
+    const barSpan = endIdx - startIdx + 1
+    const newEndCellIdx = Math.min(cells.length - 1, newStartCellIdx + barSpan - 1)
+    if (newEndCellIdx < newStartCellIdx) return null
+    const newStart = format(cells[newStartCellIdx].start, 'yyyy-MM-dd')
+    const newEnd = format(addDays(parseISO(newStart), origDurationDays - 1), 'yyyy-MM-dd')
+    let finalStart = newStart
+    let finalEnd = newEnd
+    if (siblingAllocations.length > 0) {
+      const adjusted = adjustToNoOverlap(newStart, newEnd, siblingAllocations, allocation.id)
+      finalStart = adjusted.startDate
+      finalEnd = adjusted.endDate
+    }
+    if (parseISO(finalStart) <= parseISO(finalEnd)) {
+      return {
+        startDate: finalStart,
+        endDate: finalEnd,
+        segments: [{ start: finalStart, end: finalEnd, ratio }],
+      }
+    }
+    return null
+  }
+
+  const resizeMinPx = cellWidth / 2
+  if (Math.abs(offsetPx) < resizeMinPx) return null
+
+  const cellsDelta = Math.round(offsetPx / cellWidth)
+  if (cellsDelta === 0) return null
+
+  let newStart: string
+  let newEnd: string
+  if (mode === 'resize-left') {
+    const newStartCellIdx = Math.max(0, Math.min(endIdx, startIdx + cellsDelta))
+    newStart = format(cells[newStartCellIdx].start, 'yyyy-MM-dd')
+    newEnd = origEnd
+  } else {
+    const newEndCellIdx = Math.max(startIdx, Math.min(cells.length - 1, endIdx + cellsDelta))
+    newStart = origStart
+    newEnd = format(cells[newEndCellIdx].end, 'yyyy-MM-dd')
+  }
+
+  if (siblingAllocations.length > 0) {
+    const adjusted = adjustToNoOverlap(newStart, newEnd, siblingAllocations, allocation.id)
+    newStart = adjusted.startDate
+    newEnd = adjusted.endDate
+  }
+
+  const datesChanged = newStart !== origStart || newEnd !== origEnd
+  if (datesChanged && parseISO(newStart) <= parseISO(newEnd)) {
+    return {
+      startDate: newStart,
+      endDate: newEnd,
+      segments: [{ start: newStart, end: newEnd, ratio }],
+    }
+  }
+  return null
+}
+
+function layoutPixelsForDates(
+  cells: TimelineCell[],
+  startDate: string,
+  endDate: string
+): { left: number; width: number } | null {
+  const si = getCellIndex(cells, parseISO(startDate))
+  const ei = getCellIndex(cells, parseISO(endDate))
+  if (si < 0 || ei < 0 || si > ei) return null
+  const left = cells.slice(0, si).reduce((s, c) => s + c.width, 0)
+  const width = cells.slice(si, ei + 1).reduce((s, c) => s + c.width, 0)
+  return { left, width }
+}
 
 const SCROLL_ZONE = 60
 const SCROLL_SPEED = 8
@@ -23,8 +118,6 @@ interface AllocationBarProps {
   siblingAllocations?: Allocation[]
 }
 
-type DragMode = 'move' | 'resize-left' | 'resize-right'
-
 export function AllocationBar({
   allocation,
   memberName,
@@ -35,8 +128,9 @@ export function AllocationBar({
 }: AllocationBarProps) {
   const cellWidth = cells[0]?.width ?? 48
   const MIN_BAR_WIDTH = cellWidth
-  const updateAllocation = useStore((s) => s.updateAllocation)
-  const updateAllocationSegments = useStore((s) => s.updateAllocationSegments)
+  const updateAllocationDatesAndSegments = useStore(
+    (s) => s.updateAllocationDatesAndSegments
+  )
   const [showRatioDialog, setShowRatioDialog] = useState(false)
   const scrollRef = useTimelineScroll()
   const scrollIntervalRef = useRef<number | null>(null)
@@ -50,6 +144,12 @@ export function AllocationBar({
     baseWidth: number
   } | null>(null)
   const [dragOffsetPx, setDragOffsetPx] = useState(0)
+  const [pendingLayout, setPendingLayout] = useState<{
+    left: number
+    width: number
+    startDate: string
+    endDate: string
+  } | null>(null)
   const dragStateRef = useRef<typeof dragState>(null)
   const dragOffsetRef = useRef(0)
   dragStateRef.current = dragState
@@ -58,6 +158,17 @@ export function AllocationBar({
   useEffect(() => () => {
     if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current)
   }, [])
+
+  /** 스토어 props가 커밋과 일치하면 pending 시각 잠금 해제 */
+  useEffect(() => {
+    if (!pendingLayout) return
+    if (
+      allocation.startDate === pendingLayout.startDate &&
+      allocation.endDate === pendingLayout.endDate
+    ) {
+      setPendingLayout(null)
+    }
+  }, [allocation.startDate, allocation.endDate, pendingLayout])
 
   const startIdx = getCellIndex(cells, parseISO(allocation.startDate))
   const endIdx = getCellIndex(cells, parseISO(allocation.endDate))
@@ -86,100 +197,6 @@ export function AllocationBar({
         el.scrollLeft += SCROLL_SPEED
       }, 16)
     }
-  }
-
-  const commitDrag = (mode: DragMode, offsetPx: number): boolean => {
-    const origStart = allocation.startDate
-    const origEnd = allocation.endDate
-    const origDurationDays = Math.max(1, differenceInDays(parseISO(origEnd), parseISO(origStart)) + 1)
-
-    if (mode === 'move') {
-      /** 칸마다 경계: 0.5~1.5칸→1칸, 1.5~2.5칸→2칸. round(offsetPx/cellWidth) 사용 */
-      const cellsToMove = Math.round(offsetPx / cellWidth)
-      if (cellsToMove === 0) return false
-      const newStartCellIdx = Math.max(0, Math.min(cells.length - 1, startIdx + cellsToMove))
-      const barSpan = endIdx - startIdx + 1
-      const newEndCellIdx = Math.min(cells.length - 1, newStartCellIdx + barSpan - 1)
-      if (newEndCellIdx < newStartCellIdx) return false
-      const newStart = format(cells[newStartCellIdx].start, 'yyyy-MM-dd')
-      const newEnd = format(addDays(parseISO(newStart), origDurationDays - 1), 'yyyy-MM-dd')
-      let finalStart = newStart
-      let finalEnd = newEnd
-      if (siblingAllocations.length > 0) {
-        const adjusted = adjustToNoOverlap(newStart, newEnd, siblingAllocations, allocation.id)
-        finalStart = adjusted.startDate
-        finalEnd = adjusted.endDate
-      }
-      if (parseISO(finalStart) <= parseISO(finalEnd)) {
-        void (async () => {
-          try {
-            await updateAllocation(allocation.id, {
-              startDate: finalStart,
-              endDate: finalEnd,
-            })
-            await updateAllocationSegments(allocation.id, [
-              {
-                start: finalStart,
-                end: finalEnd,
-                ratio: allocation.segments[0]?.ratio ?? 1,
-              },
-            ])
-          } catch (err) {
-            alert(err instanceof Error ? err.message : String(err))
-          }
-        })()
-        return true
-      }
-      return false
-    }
-
-    /** 이동과 동일: 0.5~1.5칸→1칸, 1.5~2.5칸→2칸 */
-    const resizeMinPx = cellWidth / 2
-    if (Math.abs(offsetPx) < resizeMinPx) return false
-
-    const cellsDelta = Math.round(offsetPx / cellWidth)
-    if (cellsDelta === 0) return false
-
-    let newStart: string
-    let newEnd: string
-    if (mode === 'resize-left') {
-      const newStartCellIdx = Math.max(0, Math.min(endIdx, startIdx + cellsDelta))
-      newStart = format(cells[newStartCellIdx].start, 'yyyy-MM-dd')
-      newEnd = origEnd
-    } else {
-      const newEndCellIdx = Math.max(startIdx, Math.min(cells.length - 1, endIdx + cellsDelta))
-      newStart = origStart
-      newEnd = format(cells[newEndCellIdx].end, 'yyyy-MM-dd')
-    }
-
-    if (siblingAllocations.length > 0) {
-      const adjusted = adjustToNoOverlap(newStart, newEnd, siblingAllocations, allocation.id)
-      newStart = adjusted.startDate
-      newEnd = adjusted.endDate
-    }
-
-    const datesChanged = newStart !== origStart || newEnd !== origEnd
-    if (datesChanged && parseISO(newStart) <= parseISO(newEnd)) {
-      void (async () => {
-        try {
-          await updateAllocation(allocation.id, {
-            startDate: newStart,
-            endDate: newEnd,
-          })
-          await updateAllocationSegments(allocation.id, [
-            {
-              start: newStart,
-              end: newEnd,
-              ratio: allocation.segments[0]?.ratio ?? 1,
-            },
-          ])
-        } catch (err) {
-          alert(err instanceof Error ? err.message : String(err))
-        }
-      })()
-      return true
-    }
-    return false
   }
 
   const singleRatio =
@@ -211,9 +228,13 @@ export function AllocationBar({
       const clamped = Math.max(MIN_BAR_WIDTH - baseWidth, offset)
       displayWidth = baseWidth + clamped
     }
+  } else if (pendingLayout) {
+    displayLeft = pendingLayout.left
+    displayWidth = pendingLayout.width
   }
 
   const setupDrag = (mode: DragMode, startX: number) => {
+    setPendingLayout(null)
     setDragState({ mode, startX, baseLeft, baseWidth })
     setDragOffsetPx(0)
     hasMovedRef.current = false
@@ -236,9 +257,49 @@ export function AllocationBar({
     }
     const state = dragStateRef.current
     if (state) {
-      const committed = commitDrag(state.mode, dragOffsetRef.current)
+      const commit = computeDragCommit(
+        state.mode,
+        dragOffsetRef.current,
+        allocation,
+        cells,
+        startIdx,
+        endIdx,
+        siblingAllocations,
+        cellWidth
+      )
+      const committed = commit !== null
       didDragRef.current = hasMovedRef.current || committed
+
+      if (commit) {
+        const px = layoutPixelsForDates(cells, commit.startDate, commit.endDate)
+        if (px) {
+          setPendingLayout({
+            left: px.left,
+            width: px.width,
+            startDate: commit.startDate,
+            endDate: commit.endDate,
+          })
+        }
+      }
+
       setDragState(null)
+      setDragOffsetPx(0)
+
+      if (commit) {
+        void (async () => {
+          try {
+            await updateAllocationDatesAndSegments(
+              allocation.id,
+              commit.startDate,
+              commit.endDate,
+              commit.segments
+            )
+          } catch (err) {
+            setPendingLayout(null)
+            alert(err instanceof Error ? err.message : String(err))
+          }
+        })()
+      }
     }
     window.removeEventListener('mousemove', handleMouseMove)
     window.removeEventListener('mouseup', handleMouseUp)
