@@ -44,6 +44,7 @@ export function MemberRow({ member }: MemberRowProps) {
         >
           <MemberDropZone
             memberId={member.id}
+            memberRole={member.role}
             cells={cells}
             onDrop={(projectId, mid, role, startDate, endDate) =>
               void addAllocation(projectId, mid, role, startDate, endDate).catch((err) =>

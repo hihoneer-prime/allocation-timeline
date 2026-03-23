@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '@/store/useStore'
 import { ProjectForm } from '@/components/dialogs/ProjectForm'
 import { ProjectEditDialog } from '@/components/dialogs/ProjectEditDialog'
+import { ProjectChip } from '@/components/layout/ProjectChip'
 import type { Project } from '@/types'
 
 export function ProjectList() {
@@ -52,12 +53,12 @@ export function ProjectList() {
         {projects.map((p) => (
           <li
             key={p.id}
-            className={`group flex cursor-pointer items-center justify-between rounded px-2 py-1 text-sm hover:bg-slate-100 ${
+            className={`group flex cursor-pointer items-center justify-between gap-1 rounded px-2 py-1 text-sm hover:bg-slate-100 ${
               selectedProjectId === p.id ? 'bg-emerald-100' : ''
             }`}
             onClick={() => setSelectedProjectId(selectedProjectId === p.id ? null : p.id)}
           >
-            <span className="truncate">{p.name}</span>
+            <ProjectChip project={p} className="min-w-0 flex-1 text-left" />
             <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
               <button
                 type="button"
