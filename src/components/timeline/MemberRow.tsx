@@ -11,9 +11,10 @@ import type { Member } from '@/types'
 
 interface MemberRowProps {
   member: Member
+  selectedProjectFilterSet: Set<string>
 }
 
-export function MemberRow({ member }: MemberRowProps) {
+export function MemberRow({ member, selectedProjectFilterSet }: MemberRowProps) {
   const { cells } = useTimeline()
   const allocations = useStore((s) => s.allocations)
   const projects = useStore((s) => s.projects)
@@ -24,12 +25,18 @@ export function MemberRow({ member }: MemberRowProps) {
   const allocationsByProject = useMemo(() => {
     const map = new Map<string, typeof memberAllocations>()
     for (const alloc of memberAllocations) {
+      if (
+        selectedProjectFilterSet.size > 0 &&
+        !selectedProjectFilterSet.has(alloc.projectId)
+      ) {
+        continue
+      }
       const list = map.get(alloc.projectId) ?? []
       list.push(alloc)
       map.set(alloc.projectId, list)
     }
     return map
-  }, [memberAllocations])
+  }, [memberAllocations, selectedProjectFilterSet])
   const addAllocation = useStore((s) => s.addAllocation)
   const weeklyTotals = useMemberWeeklyTotal(member.id, memberAllocations, cells)
 

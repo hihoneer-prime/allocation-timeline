@@ -27,6 +27,8 @@ export interface AppState {
   allocations: Allocation[]
   viewMode: 'project' | 'member'
   selectedProjectId: string | null
+  selectedMemberFilterIds: string[]
+  selectedProjectFilterIds: string[]
   timelineScale: TimelineScale
   timelineStartYear: number
   scrollToTodayRequested: boolean
@@ -60,6 +62,9 @@ export interface AppState {
 
   setViewMode: (mode: 'project' | 'member') => void
   setSelectedProjectId: (id: string | null) => void
+  toggleMemberFilter: (id: string) => void
+  toggleProjectFilter: (id: string) => void
+  clearAllTimelineFilters: () => void
   setTimelineScale: (scale: TimelineScale) => void
   setTimelineStartYear: (year: number) => void
   shiftTimelineYear: (delta: number) => void
@@ -91,6 +96,8 @@ function partializeState(s: AppState) {
     timelineScale: s.timelineScale,
     timelineStartYear: s.timelineStartYear,
     sidebarCollapsed: s.sidebarCollapsed,
+    selectedMemberFilterIds: s.selectedMemberFilterIds,
+    selectedProjectFilterIds: s.selectedProjectFilterIds,
   }
   if (!isSupabaseConfigured()) {
     return {
@@ -111,6 +118,8 @@ export const useStore = create<AppState>()(
       allocations: [],
       viewMode: 'project',
       selectedProjectId: null,
+      selectedMemberFilterIds: [],
+      selectedProjectFilterIds: [],
       timelineScale: 'week',
       timelineStartYear: DEFAULT_TIMELINE_START_YEAR,
       scrollToTodayRequested: false,
@@ -150,6 +159,7 @@ export const useStore = create<AppState>()(
         set((state) => ({
           members: state.members.filter((m) => m.id !== id),
           allocations: state.allocations.filter((a) => a.memberId !== id),
+          selectedMemberFilterIds: state.selectedMemberFilterIds.filter((mid) => mid !== id),
         }))
       },
 
@@ -195,6 +205,8 @@ export const useStore = create<AppState>()(
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== id),
           allocations: state.allocations.filter((a) => a.projectId !== id),
+          selectedProjectFilterIds: state.selectedProjectFilterIds.filter((pid) => pid !== id),
+          selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId,
         }))
       },
 
@@ -290,6 +302,23 @@ export const useStore = create<AppState>()(
 
       setViewMode: (viewMode) => set({ viewMode }),
       setSelectedProjectId: (selectedProjectId) => set({ selectedProjectId }),
+      toggleMemberFilter: (id) =>
+        set((state) => ({
+          selectedMemberFilterIds: state.selectedMemberFilterIds.includes(id)
+            ? state.selectedMemberFilterIds.filter((mid) => mid !== id)
+            : [...state.selectedMemberFilterIds, id],
+        })),
+      toggleProjectFilter: (id) =>
+        set((state) => ({
+          selectedProjectFilterIds: state.selectedProjectFilterIds.includes(id)
+            ? state.selectedProjectFilterIds.filter((pid) => pid !== id)
+            : [...state.selectedProjectFilterIds, id],
+        })),
+      clearAllTimelineFilters: () =>
+        set({
+          selectedMemberFilterIds: [],
+          selectedProjectFilterIds: [],
+        }),
       setTimelineScale: (timelineScale) => set({ timelineScale }),
       setTimelineStartYear: (timelineStartYear) => set({ timelineStartYear }),
       shiftTimelineYear: (delta) =>
@@ -352,6 +381,12 @@ export const useStore = create<AppState>()(
             : {}),
           ...(typeof p.sidebarCollapsed === 'boolean'
             ? { sidebarCollapsed: p.sidebarCollapsed }
+            : {}),
+          ...(Array.isArray(p.selectedMemberFilterIds)
+            ? { selectedMemberFilterIds: p.selectedMemberFilterIds }
+            : {}),
+          ...(Array.isArray(p.selectedProjectFilterIds)
+            ? { selectedProjectFilterIds: p.selectedProjectFilterIds }
             : {}),
           selectedProjectId: null,
         }

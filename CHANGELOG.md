@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-03-23 (7)
+
+- 좌측 구성원 칩·프로젝트 목록 클릭으로 타임라인 필터(다중 토글, 재클릭 해제, 미선택=전체)
+- 선택 상태 시각화(칩 링, 프로젝트 행 배경·링), 구성원 영역 **선택 해제** 버튼으로 필터 전체 초기화
+- Zustand: `selectedMemberFilterIds` / `selectedProjectFilterIds`, `toggleMemberFilter` / `toggleProjectFilter` / `clearAllTimelineFilters`
+
 ## 2026-03-23 (6)
 
 - 할당 바: 드래그/리사이즈 종료 시 잠깐 원래 위치·크기로 보였다가 이동하는 깜빡임 완화 (`pendingLayout`으로 커밋 직후 픽셀 유지, props 일치 시 해제)

@@ -11,9 +11,10 @@ import type { Project } from '@/types'
 
 interface ProjectRowProps {
   project: Project
+  selectedMemberFilterSet: Set<string>
 }
 
-export function ProjectRow({ project }: ProjectRowProps) {
+export function ProjectRow({ project, selectedMemberFilterSet }: ProjectRowProps) {
   const { cells } = useTimeline()
   const [showEdit, setShowEdit] = useState(false)
   const updateProject = useStore((s) => s.updateProject)
@@ -28,12 +29,18 @@ export function ProjectRow({ project }: ProjectRowProps) {
   const allocationsByMember = useMemo(() => {
     const map = new Map<string, typeof projectAllocations>()
     for (const alloc of projectAllocations) {
+      if (
+        selectedMemberFilterSet.size > 0 &&
+        !selectedMemberFilterSet.has(alloc.memberId)
+      ) {
+        continue
+      }
       const list = map.get(alloc.memberId) ?? []
       list.push(alloc)
       map.set(alloc.memberId, list)
     }
     return map
-  }, [projectAllocations])
+  }, [projectAllocations, selectedMemberFilterSet])
 
   const handleDrop = (
     _projectId: string,

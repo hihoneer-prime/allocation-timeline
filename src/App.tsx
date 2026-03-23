@@ -11,12 +11,49 @@ import { ExportImport } from '@/components/layout/ExportImport'
 import { useAppBootstrap } from '@/hooks/useAppBootstrap'
 import { AuthBar } from '@/components/auth/AuthBar'
 import { isSupabaseConfigured } from '@/lib/env'
+import { useMemo } from 'react'
 
 function App() {
   const bootReady = useAppBootstrap()
   const viewMode = useStore((s) => s.viewMode)
   const projects = useStore((s) => s.projects)
   const members = useStore((s) => s.members)
+  const allocations = useStore((s) => s.allocations)
+  const selectedMemberFilterIds = useStore((s) => s.selectedMemberFilterIds)
+  const selectedProjectFilterIds = useStore((s) => s.selectedProjectFilterIds)
+
+  const selectedMemberFilterSet = useMemo(
+    () => new Set(selectedMemberFilterIds),
+    [selectedMemberFilterIds]
+  )
+  const selectedProjectFilterSet = useMemo(
+    () => new Set(selectedProjectFilterIds),
+    [selectedProjectFilterIds]
+  )
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      const projectMatch =
+        selectedProjectFilterSet.size === 0 || selectedProjectFilterSet.has(project.id)
+      if (!projectMatch) return false
+      if (selectedMemberFilterSet.size === 0) return true
+      return allocations.some(
+        (a) => a.projectId === project.id && selectedMemberFilterSet.has(a.memberId)
+      )
+    })
+  }, [projects, allocations, selectedProjectFilterSet, selectedMemberFilterSet])
+
+  const filteredMembers = useMemo(() => {
+    return members.filter((member) => {
+      const memberMatch =
+        selectedMemberFilterSet.size === 0 || selectedMemberFilterSet.has(member.id)
+      if (!memberMatch) return false
+      if (selectedProjectFilterSet.size === 0) return true
+      return allocations.some(
+        (a) => a.memberId === member.id && selectedProjectFilterSet.has(a.projectId)
+      )
+    })
+  }, [members, allocations, selectedMemberFilterSet, selectedProjectFilterSet])
 
   if (isSupabaseConfigured() && !bootReady) {
     return (
@@ -50,15 +87,23 @@ function App() {
         >
           {viewMode === 'project' ? (
             <>
-              {projects.map((project) => (
-                <ProjectRow key={project.id} project={project} />
+              {filteredProjects.map((project) => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  selectedMemberFilterSet={selectedMemberFilterSet}
+                />
               ))}
               <MemberTotalSection />
             </>
           ) : (
             <>
-              {members.map((member) => (
-                <MemberRow key={member.id} member={member} />
+              {filteredMembers.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  selectedProjectFilterSet={selectedProjectFilterSet}
+                />
               ))}
               <MemberTotalSection />
             </>

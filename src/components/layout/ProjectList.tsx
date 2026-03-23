@@ -9,7 +9,9 @@ import type { Project } from '@/types'
 export function ProjectList() {
   const projects = useStore((s) => s.projects)
   const selectedProjectId = useStore((s) => s.selectedProjectId)
+  const selectedProjectFilterIds = useStore((s) => s.selectedProjectFilterIds)
   const setSelectedProjectId = useStore((s) => s.setSelectedProjectId)
+  const toggleProjectFilter = useStore((s) => s.toggleProjectFilter)
   const removeProject = useStore((s) => s.removeProject)
   const [showForm, setShowForm] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -54,9 +56,12 @@ export function ProjectList() {
           <li
             key={p.id}
             className={`group flex cursor-pointer items-center justify-between gap-1 rounded px-2 py-1 text-sm hover:bg-slate-100 ${
-              selectedProjectId === p.id ? 'bg-emerald-100' : ''
+              selectedProjectFilterIds.includes(p.id) ? 'bg-emerald-100 ring-1 ring-emerald-400' : ''
             }`}
-            onClick={() => setSelectedProjectId(selectedProjectId === p.id ? null : p.id)}
+            onClick={() => {
+              toggleProjectFilter(p.id)
+              setSelectedProjectId(p.id)
+            }}
           >
             <ProjectChip project={p} className="min-w-0 flex-1 text-left" />
             <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
