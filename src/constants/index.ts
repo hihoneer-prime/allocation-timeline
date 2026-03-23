@@ -4,7 +4,7 @@ export const ROLES = [
   '기획',
   'UI디자인',
   'DS',
-  'SP',
+  'PM',
   'BD',
   '운영',
 ] as const
@@ -17,6 +17,8 @@ export const ROLE_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
   기획: { bg: 'bg-amber-200', text: 'text-amber-800' },
   UI디자인: { bg: 'bg-pink-200', text: 'text-pink-800' },
   DS: { bg: 'bg-cyan-200', text: 'text-cyan-800' },
+  PM: { bg: 'bg-emerald-200', text: 'text-emerald-800' },
+  /** 구버전·기존 데이터 호환 */
   SP: { bg: 'bg-emerald-200', text: 'text-emerald-800' },
   BD: { bg: 'bg-orange-200', text: 'text-orange-800' },
   운영: { bg: 'bg-slate-200', text: 'text-slate-800' },
