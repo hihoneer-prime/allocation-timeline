@@ -64,18 +64,20 @@ function TimelineGridInner({
             )}
           </div>
 
-          {/* 영역2+3: 세로 스크롤 공통, 셀만 가로 스크롤 (헤더+본문 동일 컨테이너로 줌 시 정렬 유지) */}
+          {/* 영역2+3: 세로 스크롤 공통, 우측만 가로 스크롤(ref 1개). 좌·우 헤더 각각 sticky로 상단 고정 */}
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
             <div className="flex">
               <div
                 className="flex flex-shrink-0 flex-col border-r border-slate-200 bg-slate-50"
                 style={{ width: SIDEBAR_WIDTH }}
               >
-                <TimelineColumnProvider mode="label">
-                  <TimelineHeader cells={cells} />
-                  <TimelineSubHeader cells={cells} />
-                  {children}
-                </TimelineColumnProvider>
+                <div className="sticky top-0 z-20 flex flex-shrink-0 flex-col border-b border-slate-300 bg-slate-50 shadow-sm">
+                  <TimelineColumnProvider mode="label">
+                    <TimelineHeader cells={cells} />
+                    <TimelineSubHeader cells={cells} />
+                  </TimelineColumnProvider>
+                </div>
+                <TimelineColumnProvider mode="label">{children}</TimelineColumnProvider>
               </div>
               <div
                 ref={scrollRef}
@@ -85,7 +87,7 @@ function TimelineGridInner({
                   className="flex flex-col"
                   style={{ minWidth: totalWidth, width: totalWidth }}
                 >
-                  <div className="sticky top-0 z-10 flex flex-shrink-0 flex-col bg-white">
+                  <div className="sticky top-0 z-20 flex flex-shrink-0 flex-col border-b border-slate-300 bg-white shadow-sm">
                     <TimelineColumnProvider mode="cell">
                       <TimelineHeader cells={cells} />
                       <TimelineSubHeader cells={cells} />
