@@ -42,7 +42,9 @@ export function ProjectRow({ project }: ProjectRowProps) {
     startDate: string,
     endDate: string
   ) => {
-    addAllocation(project.id, memberId, role, startDate, endDate)
+    void addAllocation(project.id, memberId, role, startDate, endDate).catch((err) =>
+      alert(err instanceof Error ? err.message : String(err))
+    )
   }
 
   return (
@@ -59,12 +61,20 @@ export function ProjectRow({ project }: ProjectRowProps) {
             <ProjectStartMarker
               project={project}
               cells={cells}
-              onStartChange={(date) => updateProject(project.id, { startDate: date })}
+              onStartChange={(date) =>
+                void updateProject(project.id, { startDate: date }).catch((err) =>
+                  alert(err instanceof Error ? err.message : String(err))
+                )
+              }
             />
             <ProjectEndMarker
               project={project}
               cells={cells}
-              onEndChange={(date) => updateProject(project.id, { endDate: date })}
+              onEndChange={(date) =>
+                void updateProject(project.id, { endDate: date }).catch((err) =>
+                  alert(err instanceof Error ? err.message : String(err))
+                )
+              }
             />
           </DropZone>
         </TimelineRow>

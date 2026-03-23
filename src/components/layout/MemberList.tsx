@@ -71,7 +71,11 @@ export function MemberList() {
             <MemberChip
               key={m.id}
               member={m}
-              onRemove={() => removeMember(m.id)}
+              onRemove={() =>
+                void removeMember(m.id).catch((err) =>
+                  alert(err instanceof Error ? err.message : String(err))
+                )
+              }
               onEdit={() => openEditForm(m)}
             />
           ))}

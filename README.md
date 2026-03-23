@@ -17,6 +17,28 @@
 - Tailwind CSS
 - Zustand (상태 관리)
 - date-fns (날짜 처리)
+- (선택) Supabase: Postgres + Auth (공개 읽기, 로그인 후 쓰기)
+
+## Supabase 연동 (선택)
+
+`.env.local`에 다음을 넣으면 데이터가 Supabase에 저장되고, 비로그인 사용자는 읽기만 할 수 있습니다.
+
+```bash
+cp .env.example .env.local
+# VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY 입력
+```
+
+1. [Supabase](https://supabase.com)에서 프로젝트 생성  
+2. **SQL Editor**에서 `docs/supabase/schema.sql` 전체 실행 (테이블 + RLS)  
+3. **Authentication → Providers**에서 Email 활성화 (필요 시 이메일 확인 비활성화는 프로젝트 설정에서)  
+4. **Settings → API**에서 Project URL / anon public key를 `.env.local`에 복사  
+5. `npm run dev` 재시작  
+
+환경 변수가 없으면 이전과 동일하게 **localStorage**에만 저장됩니다.
+
+## 배포 (Vercel 등)
+
+호스팅 서비스의 **Environment Variables**에 로컬 `.env.local`과 동일하게 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`를 넣은 뒤 빌드·배포합니다. 배포 후 Supabase **Authentication → URL Configuration**에서 프로덕션 도메인을 허용할 수 있습니다(이메일 링크·OAuth 사용 시).
 
 ## 실행 방법
 
@@ -39,5 +61,6 @@ npm run build
 - 프로젝트 시작/종료 마커 드래그로 날짜 조정
 - 할당 바: 전체 드래그(이동), 양 끝 드래그(기간 조정), 클릭(비율/역할 설정)
 - 투입 비율: 0.01~1.0, 소수 둘째자리
-- localStorage 자동 저장
+- localStorage 자동 저장 (Supabase 미사용 시) / Supabase 동기화 (설정 시)
+- 로그인 후 구성원·프로젝트·투입 수정 (Supabase + RLS)
 - JSON 내보내기/불러오기/URL 복사 공유

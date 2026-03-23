@@ -13,10 +13,14 @@ export function ProjectEditDialog({ project, onClose }: ProjectEditDialogProps) 
   const [endDate, setEndDate] = useState(project.endDate)
   const updateProject = useStore((s) => s.updateProject)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    updateProject(project.id, { name, startDate, endDate })
-    onClose()
+    try {
+      await updateProject(project.id, { name, startDate, endDate })
+      onClose()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    }
   }
 
   return (

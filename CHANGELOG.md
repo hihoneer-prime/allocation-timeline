@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-03-23 (3)
+
+- README: Vercel 배포 시 환경 변수 안내 추가
+
+## 2026-03-23 (2)
+
+- Supabase 선택 연동: 공개 읽기 + 로그인 후 쓰기 (이메일/비밀번호)
+- `docs/supabase/schema.sql` 테이블·RLS 정책
+- 초기 로드: URL 공유 데이터 → Supabase 조회 → localStorage (미설정 시)
+- 환경 변수 미설정 시 기존과 동일하게 로컬 전용
+
 ## 2026-03-23
 
 - 타임라인 헤더·날짜 표시 개선

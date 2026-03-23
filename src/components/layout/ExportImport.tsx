@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { useStore } from '@/store/useStore'
-
 export function ExportImport() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const exportData = useStore((s) => s.exportData)
@@ -24,14 +23,20 @@ export function ExportImport() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result as string)
-        if (data.members && data.projects && data.allocations) {
-          importData(data)
+      void (async () => {
+        try {
+          const data = JSON.parse(reader.result as string)
+          if (data.members && data.projects && data.allocations) {
+            try {
+              await importData(data)
+            } catch (err) {
+              alert(err instanceof Error ? err.message : String(err))
+            }
+          }
+        } catch {
+          alert('파일 형식이 올바르지 않습니다.')
         }
-      } catch {
-        alert('파일 형식이 올바르지 않습니다.')
-      }
+      })()
     }
     reader.readAsText(file)
     e.target.value = ''

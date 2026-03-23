@@ -45,7 +45,11 @@ export function MemberRow({ member }: MemberRowProps) {
           <MemberDropZone
             memberId={member.id}
             cells={cells}
-            onDrop={addAllocation}
+            onDrop={(projectId, mid, role, startDate, endDate) =>
+              void addAllocation(projectId, mid, role, startDate, endDate).catch((err) =>
+                alert(err instanceof Error ? err.message : String(err))
+              )
+            }
           >
             <div className="relative h-full" style={{ minHeight: ROW_HEIGHT }} />
           </MemberDropZone>

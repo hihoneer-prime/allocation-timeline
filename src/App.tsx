@@ -8,15 +8,23 @@ import { ProjectList } from '@/components/layout/ProjectList'
 import { ProjectSummary } from '@/components/layout/ProjectSummary'
 import { ViewToggle } from '@/components/layout/ViewToggle'
 import { ExportImport } from '@/components/layout/ExportImport'
-import { useLoadFromUrl } from '@/hooks/useLoadFromUrl'
-import { useRehydrateStore } from '@/hooks/useRehydrateStore'
+import { useAppBootstrap } from '@/hooks/useAppBootstrap'
+import { AuthBar } from '@/components/auth/AuthBar'
+import { isSupabaseConfigured } from '@/lib/env'
 
 function App() {
-  useRehydrateStore()
-  useLoadFromUrl()
+  const bootReady = useAppBootstrap()
   const viewMode = useStore((s) => s.viewMode)
   const projects = useStore((s) => s.projects)
   const members = useStore((s) => s.members)
+
+  if (isSupabaseConfigured() && !bootReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-100 text-slate-600">
+        데이터 불러오는 중…
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen flex-col bg-slate-100">
@@ -24,7 +32,10 @@ function App() {
         <h1 className="text-lg font-semibold text-slate-900">
           프로젝트 투입 인력 및 부하율 타임라인
         </h1>
-        <ViewToggle />
+        <div className="flex items-center gap-3">
+          <AuthBar />
+          <ViewToggle />
+        </div>
       </header>
       <main className="flex-1 min-h-0">
         <TimelineGrid

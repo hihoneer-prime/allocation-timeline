@@ -29,27 +29,35 @@ export function AllocationRatioDialog({
   const updateAllocation = useStore((s) => s.updateAllocation)
   const removeAllocation = useStore((s) => s.removeAllocation)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const clamped = Math.max(0.01, Math.min(1, Math.round(ratio * 100) / 100))
     const sortedStart = startDate <= endDate ? startDate : endDate
     const sortedEnd = startDate <= endDate ? endDate : startDate
-    updateAllocationSegments(allocation.id, [
-      {
-        start: sortedStart,
-        end: sortedEnd,
-        ratio: clamped,
-      },
-    ])
-    updateAllocation(allocation.id, { role, startDate: sortedStart, endDate: sortedEnd })
-    onClose()
+    try {
+      await updateAllocationSegments(allocation.id, [
+        {
+          start: sortedStart,
+          end: sortedEnd,
+          ratio: clamped,
+        },
+      ])
+      await updateAllocation(allocation.id, {
+        role,
+        startDate: sortedStart,
+        endDate: sortedEnd,
+      })
+      onClose()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    }
   }
 
   const handleDelete = () => {
-    if (confirm('이 투입을 삭제하시겠습니까?')) {
-      removeAllocation(allocation.id)
-      onClose()
-    }
+    if (!confirm('이 투입을 삭제하시겠습니까?')) return
+    void removeAllocation(allocation.id)
+      .then(() => onClose())
+      .catch((err) => alert(err instanceof Error ? err.message : String(err)))
   }
 
   return (

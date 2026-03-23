@@ -21,15 +21,19 @@ export function MemberForm({ onClose, member }: MemberFormProps) {
     }
   }, [member])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-    if (member) {
-      updateMember(member.id, { name: name.trim(), role })
-    } else {
-      addMember(name.trim(), role)
+    try {
+      if (member) {
+        await updateMember(member.id, { name: name.trim(), role })
+      } else {
+        await addMember(name.trim(), role)
+      }
+      onClose()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
     }
-    onClose()
   }
 
   return (

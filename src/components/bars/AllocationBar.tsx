@@ -111,10 +111,23 @@ export function AllocationBar({
         finalEnd = adjusted.endDate
       }
       if (parseISO(finalStart) <= parseISO(finalEnd)) {
-        updateAllocation(allocation.id, { startDate: finalStart, endDate: finalEnd })
-        updateAllocationSegments(allocation.id, [
-          { start: finalStart, end: finalEnd, ratio: allocation.segments[0]?.ratio ?? 1 },
-        ])
+        void (async () => {
+          try {
+            await updateAllocation(allocation.id, {
+              startDate: finalStart,
+              endDate: finalEnd,
+            })
+            await updateAllocationSegments(allocation.id, [
+              {
+                start: finalStart,
+                end: finalEnd,
+                ratio: allocation.segments[0]?.ratio ?? 1,
+              },
+            ])
+          } catch (err) {
+            alert(err instanceof Error ? err.message : String(err))
+          }
+        })()
         return true
       }
       return false
@@ -147,10 +160,23 @@ export function AllocationBar({
 
     const datesChanged = newStart !== origStart || newEnd !== origEnd
     if (datesChanged && parseISO(newStart) <= parseISO(newEnd)) {
-      updateAllocation(allocation.id, { startDate: newStart, endDate: newEnd })
-      updateAllocationSegments(allocation.id, [
-        { start: newStart, end: newEnd, ratio: allocation.segments[0]?.ratio ?? 1 },
-      ])
+      void (async () => {
+        try {
+          await updateAllocation(allocation.id, {
+            startDate: newStart,
+            endDate: newEnd,
+          })
+          await updateAllocationSegments(allocation.id, [
+            {
+              start: newStart,
+              end: newEnd,
+              ratio: allocation.segments[0]?.ratio ?? 1,
+            },
+          ])
+        } catch (err) {
+          alert(err instanceof Error ? err.message : String(err))
+        }
+      })()
       return true
     }
     return false

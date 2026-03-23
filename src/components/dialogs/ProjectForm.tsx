@@ -9,14 +9,14 @@ export function ProjectForm({ onClose }: ProjectFormProps) {
   const [name, setName] = useState('')
   const addProject = useStore((s) => s.addProject)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim()) {
-      try {
-        addProject(name.trim())
-      } finally {
-        onClose()
-      }
+    if (!name.trim()) return
+    try {
+      await addProject(name.trim())
+      onClose()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
     }
   }
 

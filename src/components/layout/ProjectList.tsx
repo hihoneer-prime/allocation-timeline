@@ -74,8 +74,11 @@ export function ProjectList() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
-                  removeProject(p.id)
-                  if (selectedProjectId === p.id) setSelectedProjectId(null)
+                  void removeProject(p.id)
+                    .then(() => {
+                      if (selectedProjectId === p.id) setSelectedProjectId(null)
+                    })
+                    .catch((err) => alert(err instanceof Error ? err.message : String(err)))
                 }}
                 className="rounded p-0.5 text-slate-400 hover:text-red-600"
                 title="삭제"
